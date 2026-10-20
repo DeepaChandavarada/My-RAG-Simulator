@@ -1,1 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Studio — Interactive Simulator</title>
+<style>
+  :root {
+    --ink:#24242b; --muted:#737380; --paper:#fffdfb; --line:#eee9e5;
+    --pink:#e60023; --rose:#fff0f2; --peach:#fff2e8; --yellow:#fff8db;
+    --mint:#e9f8ef; --blue:#eaf3ff; --lilac:#f3edff; --teal:#e7f8f7;
+    --shadow:0 8px 28px rgba(42,32,30,.07);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#f7f5f2;color:var(--ink);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  button,input{font:inherit}
+  button{cursor:pointer}
+  .app{min-height:100vh;display:grid;grid-template-columns:220px minmax(0,1fr)}
+  aside{background:#fff;border-right:1px solid var(--line);padding:25px 16px;display:flex;flex-direction:column;gap:26px}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 9px;font-size:19px;font-weight:850;letter-spacing:-.5px}
+  .brand-mark{width:34px;height:34px;border-radius:12px;background:var(--pink);color:white;display:grid;place-items:center;font-weight:900;font-size:22px}
+  .nav{display:grid;gap:7px}
+  .nav button{border:0;background:transparent;text-align:left;padding:12px 13px;border-radius:13px;color:#55515b;display:flex;align-items:center;gap:12px;font-weight:650}
+  .nav button.active,.nav button:hover{background:#ffebee;color:#c90020}
+  .nav .ico{width:20px;text-align:center;font-size:18px}
+  .sidebar-note{margin-top:auto;background:#f6f3f0;padding:16px;border-radius:16px;color:#615c61;font-size:12px}
+  .sidebar-note strong{display:block;color:#29252a;font-size:13px;margin-bottom:6px}
+  main{padding:27px clamp(18px,3vw,42px) 50px;max-width:1600px;width:100%;margin:auto}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:23px}
+  h1{font-size:clamp(26px,3vw,36px);line-height:1.1;letter-spacing:-1.2px;margin:0 0 8px}
+  .subtitle{color:var(--muted);margin:0}
+  .pill{border:1px solid #e7e0dc;border-radius:999px;background:white;padding:8px 12px;color:#605a5c;font-size:12px;font-weight:750;white-space:nowrap}
+  .layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,.85fr);gap:22px;align-items:start}
+  .board{columns:2;column-gap:16px}
+  .card{break-inside:avoid;margin:0 0 16px;border:1px solid rgba(40,30,30,.07);border-radius:19px;padding:19px;background:white;box-shadow:var(--shadow);transition:transform .18s,border-color .18s}
+  .card:hover{transform:translateY(-2px)}
+  .hero{background:linear-gradient(135deg,#ffe8ed,#fff7f0);padding:22px}
+  .hero h2{margin:0 0 7px;font-size:20px;letter-spacing:-.5px}
+  .hero p{margin:0;color:#6e6266;font-size:13px}
+  .hero-top{display:flex;gap:13px;align-items:center}
+  .hero-icon{flex:none;width:48px;height:48px;border-radius:16px;background:#fff;color:var(--pink);display:grid;place-items:center;font-size:24px}
+  .eyebrow{font-size:11px;letter-spacing:1.1px;text-transform:uppercase;color:#91868a;font-weight:850;margin-bottom:9px}
+  .card h3{font-size:16px;margin:0 0 7px;letter-spacing:-.3px}
+  .card p{font-size:13px;color:#716c73;margin:0}
+  .step-head{display:flex;align-items:flex-start;gap:11px}
+  .num{width:31px;height:31px;border-radius:11px;display:grid;place-items:center;color:white;font-weight:850;flex:none}
+  .pink{background:#e84c68}.orange{background:#e99b39}.green{background:#20a978}.blue{background:#4385ed}.purple{background:#9860ce}.teal{background:#1ca99e}
+  .step-content{min-width:0;flex:1}
+  .mini-visual{margin-top:14px;border-radius:13px;background:rgba(255,255,255,.7);border:1px solid rgba(30,30,30,.07);padding:11px;display:flex;gap:8px;flex-wrap:wrap}
+  .file{flex:1;min-width:68px;text-align:center;padding:10px 5px;border-radius:10px;background:#fff;border:1px solid #f0e8e6;font-size:11px;font-weight:750}
+  .file span{display:block;font-size:22px;margin-bottom:4px}
+  .chunks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:13px}
+  .chunk{background:#fff;border:1px solid #eee2cc;border-radius:9px;padding:9px;font-size:10px;min-width:0}
+  .chunk b{display:block;font-size:11px;margin-bottom:3px}
+  .chunk span{color:#777;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vector{margin-top:13px;padding:11px;border-radius:10px;background:#fff;border:1px solid #d7eadf;font:11px ui-monospace,SFMono-Regular,Consolas,monospace;color:#26815f;overflow-wrap:anywhere}
+  .db{display:flex;gap:11px;align-items:center;margin-top:13px;background:#fff;border:1px solid #dce8fa;padding:12px;border-radius:11px}
+  .db-icon{font-size:30px}
+  .db strong{display:block;font-size:12px}
+  .db small{color:#787d8a;font-size:10px}
+  .query-preview{margin-top:12px;border:1px solid #ded2f7;border-radius:10px;background:#fff;padding:10px;font-size:12px}
+  .retrieval-list{display:grid;gap:6px;margin-top:12px}
+  .retrieval-row{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:7px 9px;background:#fff;border:1px solid #e7e3f0;border-radius:9px;font-size:11px}
+  .score{font-size:10px;background:#e4f6ed;color:#188353;padding:3px 7px;border-radius:999px;font-weight:850}
+  .done{display:none;margin-left:auto;color:#20a978;font-weight:900}
+  .step-card.completed{border-color:#b9e7cd}
+  .step-card.completed .done{display:inline}
+  .sidecol{display:grid;gap:16px}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:19px;padding:20px;box-shadow:var(--shadow)}
+  .panel h2{font-size:18px;margin:0 0 5px;letter-spacing:-.4px}
+  .panel-sub{font-size:12px;color:var(--muted);margin:0 0 15px}
+  .query-input{width:100%;border:1px solid #ded9d5;border-radius:12px;padding:12px 13px;outline:none;background:#fff}
+  .query-input:focus{border-color:#ee6b80;box-shadow:0 0 0 3px #ffe6ea}
+  .primary{width:100%;border:0;background:var(--pink);color:#fff;border-radius:12px;padding:12px;font-weight:800;margin-top:9px;box-shadow:0 5px 12px #e6002320}
+  .primary:hover{background:#c90020}
+  .quick{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+  .quick button{border:1px solid #eee2e3;background:#fff5f6;color:#785d63;border-radius:999px;padding:6px 10px;font-size:11px}
+  .quick button:hover{border-color:#e99aa7}
+  .progress{height:7px;border-radius:99px;background:#f0eeec;overflow:hidden;margin:12px 0 5px}
+  .progress-bar{height:100%;width:0;background:linear-gradient(90deg,#f06a80,#f5a15b);transition:width .4s}
+  .statusline{font-size:11px;color:#8b8587;display:flex;justify-content:space-between}
+  .results-list{display:grid;gap:9px}
+  .result-step{display:flex;gap:10px;align-items:flex-start}
+  .tiny-num{width:25px;height:25px;border-radius:9px;background:#f2eff0;color:#7d7478;display:grid;place-items:center;font-size:11px;font-weight:850;flex:none}
+  .result-step.active .tiny-num{background:#ffe5ea;color:#c90020}
+  .result-step.complete .tiny-num{background:#e2f7ea;color:#138451}
+  .result-step strong{display:block;font-size:12px;margin:2px 0}
+  .result-step small{display:block;color:#8a858a;font-size:11px}
+  .answer{margin-top:16px;border-radius:14px;background:#f8f4ff;border:1px solid #e5d9ff;padding:14px}
+  .answer-title{font-size:12px;font-weight:850;color:#6544a0;display:flex;align-items:center;gap:7px;margin-bottom:7px}
+  .answer p{color:#514b5a;font-size:12px;line-height:1.6}
+  .sources{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .source{background:white;border:1px solid #e2d9f3;border-radius:8px;padding:5px 8px;font-size:10px;color:#645779}
+  .explain{margin-top:12px;border-top:1px solid #eee7e2;padding-top:12px;font-size:12px;color:#77717a}
+  .explain strong{color:#36313a}
+  .footer-note{color:#99929a;font-size:11px;text-align:center;margin-top:18px}
+  @media(max-width:1050px){.app{grid-template-columns:74px minmax(0,1fr)}aside{padding:20px 10px;align-items:center}.brand{padding:0}.brand-name,.nav-label,.sidebar-note{display:none}.nav button{justify-content:center;padding:12px;width:48px}.layout{grid-template-columns:minmax(0,1.25fr) minmax(280px,.85fr)}.board{columns:1}}
+  @media(max-width:760px){.app{display:block}aside{position:sticky;top:0;z-index:5;flex-direction:row;justify-content:space-between;padding:10px 14px;border-right:0;border-bottom:1px solid var(--line)}.brand-name{display:inline}.nav{display:flex;gap:3px}.nav button{width:40px;padding:9px}.nav-label{display:none}main{padding:20px 14px 35px}.topbar{align-items:flex-start}.pill{display:none}.layout{grid-template-columns:1fr}.board{columns:1}.sidecol{grid-row:1}.hero{padding:18px}}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand"><div class="brand-mark">P</div><span class="brand-name">RAG Studio</span></div>
+    <nav class="nav" aria-label="Main navigation">
+      <button class="active" data-view="overview"><span class="ico">⌂</span><span class="nav-label">Overview</span></button>
+      <button data-view="documents"><span class="ico">▤</span><span class="nav-label">Documents</span></button>
+      <button data-view="knowledge"><span class="ico">▥</span><span class="nav-label">Knowledge base</span></button>
+      <button data-view="query"><span class="ico">⌕</span><span class="nav-label">Query lab</span></button>
+    </nav>
+    <div class="sidebar-note"><strong>RAG in a nutshell</strong>RAG retrieves relevant information from your own documents and gives it to an LLM as context before it answers.</div>
+  </aside>
 
+  <main>
+    <header class="topbar">
+      <div><h1>RAG Simulator</h1><p class="subtitle">From scattered documents to a grounded answer — step by step.</p></div>
+      <div class="pill">✦ INTERACTIVE LEARNING BOARD</div>
+    </header>
+
+    <div class="layout">
+      <section class="board" aria-label="RAG process cards">
+        <article class="card hero">
+          <div class="hero-top"><div class="hero-icon">▤</div><div><div class="eyebrow">The big picture</div><h2>How RAG works</h2><p>Explore each stage, then ask a question to see the retrieval pipeline in action.</p></div></div>
+        </article>
+
+        <article class="card step-card" id="step1" style="background:linear-gradient(140deg,#fff0f2,#fff)">
+          <div class="step-head"><div class="num pink">1</div><div class="step-content"><h3>Collect source documents <span class="done">✓</span></h3><p>Start with useful material: PDFs, webpages, FAQs, manuals, or notes.</p></div></div>
+          <div class="mini-visual"><div class="file"><span>📕</span>PDF guide</div><div class="file"><span>🌐</span>Website</div><div class="file"><span>📝</span>FAQ text</div></div>
+        </article>
+
+        <article class="card step-card" id="step2" style="background:linear-gradient(140deg,#fff7e7,#fff)">
+          <div class="step-head"><div class="num orange">2</div><div class="step-content"><h3>Split into chunks <span class="done">✓</span></h3><p>Break long documents into smaller text passages that can be retrieved individually.</p></div></div>
+          <div class="chunks"><div class="chunk"><b>Chunk A</b><span>The Eiffel Tower is in Paris…</span></div><div class="chunk"><b>Chunk B</b><span>It was completed in 1889…</span></div><div class="chunk"><b>Chunk C</b><span>The tower is about 330 metres…</span></div></div>
+        </article>
+
+        <article class="card step-card" id="step3" style="background:linear-gradient(140deg,#e9f8ef,#fff)">
+          <div class="step-head"><div class="num green">3</div><div class="step-content"><h3>Create embeddings <span class="done">✓</span></h3><p>An embedding model maps each chunk to numbers that capture aspects of its meaning.</p></div></div>
+          <div class="vector" id="vector-demo">“The Eiffel Tower is in Paris” → [0.12, −0.34, 0.56, …]</div>
+          <p style="margin-top:8px;font-size:11px">Important: the chunk is text; the embedding is its numerical representation.</p>
+        </article>
+
+        <article class="card step-card" id="step4" style="background:linear-gradient(140deg,#eaf3ff,#fff)">
+          <div class="step-head"><div class="num blue">4</div><div class="step-content"><h3>Build the knowledge base <span class="done">✓</span></h3><p>Store vectors with the original text and metadata in a vector database or searchable index.</p></div></div>
+          <div class="db"><div class="db-icon">🛢️</div><div><strong>Vector database</strong><small>Embedding + chunk text + source reference</small></div></div>
+        </article>
+
+        <article class="card step-card" id="step5" style="background:linear-gradient(140deg,#f3edff,#fff)">
+          <div class="step-head"><div class="num purple">5</div><div class="step-content"><h3>Process the user's query <span class="done">✓</span></h3><p>The query is usually embedded too, so the system can search for semantically similar content.</p></div></div>
+          <div class="query-preview" id="query-demo">“Where is the Eiffel Tower?” → query embedding → search</div>
+        </article>
+
+        <article class="card step-card" id="step6" style="background:linear-gradient(140deg,#e7f8f7,#fff)">
+          <div class="step-head"><div class="num teal">6</div><div class="step-content"><h3>Retrieve and optionally rerank <span class="done">✓</span></h3><p>Retrieval gathers candidates. A reranker can reorder them by query relevance, then the top chunks are selected.</p></div></div>
+          <div class="retrieval-list" id="retrieval-demo"><div class="retrieval-row"><span>Chunk A · initial retrieval</span><span class="score">0.87</span></div><div class="retrieval-row"><span>Chunk B · initial retrieval</span><span class="score">0.92</span></div><div class="retrieval-row"><span>Chunk C · initial retrieval</span><span class="score">0.81</span></div></div>
+        </article>
+
+        <article class="card step-card" id="step7" style="background:linear-gradient(140deg,#f3edff,#fff)">
+          <div class="step-head"><div class="num purple">7</div><div class="step-content"><h3>Generate an answer with the LLM <span class="done">✓</span></h3><p>The LLM receives the question plus the selected text as context and composes an answer.</p></div></div>
+          <div class="mini-visual" style="align-items:center;justify-content:space-around;font-size:11px;font-weight:800"><span>Question</span><span>＋</span><span>Top chunks</span><span>→</span><span style="background:#f3edff;padding:8px 10px;border-radius:8px">LLM ✨</span><span>→ Answer</span></div>
+        </article>
+
+        <article class="card step-card" id="step8" style="background:linear-gradient(140deg,#e8f8f0,#fff)">
+          <div class="step-head"><div class="num green">8</div><div class="step-content"><h3>Return the response <span class="done">✓</span></h3><p>The user receives the answer, ideally with source citations so they can check the evidence.</p></div></div>
+          <div class="mini-visual" style="align-items:center"><span style="font-size:20px">💬</span><div><b style="font-size:12px">Answer ready</b><div style="font-size:11px;color:#777">Grounded in retrieved context</div></div></div>
+        </article>
+      </section>
+
+      <section class="sidecol">
+        <div class="panel" id="query-panel">
+          <h2>⌕ Try it yourself</h2><p class="panel-sub">Ask a question about the sample documents and run the pipeline.</p>
+          <form id="query-form">
+            <input class="query-input" id="query-input" type="text" value="Where is the Eiffel Tower?" aria-label="Your question" placeholder="Ask a question…" />
+            <button class="primary" type="submit">▶ Run simulation</button>
+          </form>
+          <div class="quick"><button type="button" data-query="Where is the Eiffel Tower?">Where is it?</button><button type="button" data-query="When was the Eiffel Tower completed?">When completed?</button><button type="button" data-query="How tall is the Eiffel Tower?">How tall?</button><button type="button" data-query="What is RAG?">What is RAG?</button></div>
+          <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+          <div class="statusline"><span id="status">Ready to simulate</span><span id="progress-text">0 / 8 steps</span></div>
+        </div>
+
+        <div class="panel">
+          <h2>Simulation results</h2><p class="panel-sub">Watch each stage update as the query moves through RAG.</p>
+          <div class="results-list" id="results-list">
+            <div class="result-step" data-result-step="1"><div class="tiny-num">1</div><div><strong>Documents collected</strong><small>3 sample documents loaded</small></div></div>
+            <div class="result-step" data-result-step="2"><div class="tiny-num">2</div><div><strong>Split into chunks</strong><small>6 example chunks available</small></div></div>
+            <div class="result-step" data-result-step="3"><div class="tiny-num">3</div><div><strong>Converted to embeddings</strong><small>Text represented as vectors</small></div></div>
+            <div class="result-step" data-result-step="4"><div class="tiny-num">4</div><div><strong>Stored in knowledge base</strong><small>Vectors linked to source text</small></div></div>
+            <div class="result-step" data-result-step="5"><div class="tiny-num">5</div><div><strong>Query embedded</strong><small>Question prepared for search</small></div></div>
+            <div class="result-step" data-result-step="6"><div class="tiny-num">6</div><div><strong>Retrieved and reranked</strong><small>Candidate chunks scored for relevance</small></div></div>
+            <div class="result-step" data-result-step="7"><div class="tiny-num">7</div><div><strong>LLM generates response</strong><small>Question + retrieved context</small></div></div>
+            <div class="result-step" data-result-step="8"><div class="tiny-num">8</div><div><strong>Answer returned</strong><small>Response shown below</small></div></div>
+          </div>
+          <div class="answer" aria-live="polite">
+            <div class="answer-title">✦ Final answer</div>
+            <p id="answer-text">Run a simulation to see how retrieved chunks can help an LLM answer a question.</p>
+            <div class="sources" id="sources"></div>
+          </div>
+          <div class="explain" id="explain"><strong>Learning tip:</strong> Embeddings help search by meaning, not only exact word matches. The scores shown here are illustrative, not produced by a real embedding model.</div>
+        </div>
+        <p class="footer-note">Learning demo · Uses a tiny built-in sample knowledge base, not a live AI model.</p>
+      </section>
+    </div>
+  </main>
+</div>
+<script>
+(() => {
+  const docs = [
+    {id:"A", source:"Doc 1 · Eiffel Tower overview", text:"The Eiffel Tower is a wrought-iron lattice tower located in Paris, France. It is one of the most famous landmarks in the world.", tags:["where","located","paris","france","eiffel","tower","landmark"]},
+    {id:"B", source:"Doc 2 · History", text:"The Eiffel Tower was completed in 1889 for the 1889 World's Fair. It was designed by engineer Gustave Eiffel's company.", tags:["when","completed","1889","history","year","built","eiffel","tower"]},
+    {id:"C", source:"Doc 3 · Facts", text:"The Eiffel Tower is about 330 metres (1,083 feet) tall, including its antennas. Its height can vary slightly with temperature.", tags:["how tall","height","330","metres","feet","tall","eiffel","tower"]},
+    {id:"D", source:"Doc 4 · RAG basics", text:"Retrieval-Augmented Generation, or RAG, retrieves relevant information from an external knowledge source and supplies it to a language model as context before the model generates an answer.", tags:["rag","retrieval","augmented","generation","llm","knowledge","context","answer"]},
+    {id:"E", source:"Doc 5 · Embeddings", text:"An embedding is a list of numbers that represents aspects of a piece of text's meaning. Similar meanings can have nearby vectors in an embedding space.", tags:["embedding","embeddings","vector","numbers","meaning","semantic","similarity"]},
+    {id:"F", source:"Doc 6 · Reranking", text:"A retriever finds candidate passages. An optional reranker scores or reorders those candidates for a particular question so the most useful passages can be placed in the LLM context.", tags:["reranker","reranking","retriever","chunks","relevance","ranking","top","context"]}
+  ];
+  const $ = id => document.getElementById(id);
+  const form = $("query-form"), input = $("query-input");
+  let running = false;
+
+  function tokenize(s){return s.toLowerCase().replace(/[^a-z0-9\s-]/g," ").split(/\s+/).filter(w=>w.length>1)}
+  function rankDocs(query){
+    const q = query.toLowerCase();
+    const words = new Set(tokenize(q));
+    return docs.map(d => {
+      let score = 0;
+      const text = d.text.toLowerCase();
+      words.forEach(w => { if(text.includes(w)) score += 1; if(d.tags.some(t=>t.includes(w)||w.includes(t))) score += .65; });
+      d.tags.forEach(t=>{ if(q.includes(t)) score += 1.8; });
+      if(q.includes("where") && d.id==="A") score+=3;
+      if((q.includes("when")||q.includes("year")||q.includes("completed")) && d.id==="B") score+=3;
+      if((q.includes("tall")||q.includes("height")) && d.id==="C") score+=3;
+      if(q.includes("what is rag") && d.id==="D") score+=4;
+      if(q.includes("embedding") && d.id==="E") score+=3;
+      if(q.includes("rerank") && d.id==="F") score+=3;
+      return {...d,raw:score};
+    }).sort((a,b)=>b.raw-a.raw).map((d,i,arr)=>({...d,score:Math.max(.31,Math.min(.99,(d.raw/(Math.max(...arr.map(x=>x.raw),1))*.72 + (6-i)*.035)))}));
+  }
+  function buildAnswer(query, selected){
+    const q=query.toLowerCase();
+    if(!query.trim()) return "Please enter a question to run the simulation.";
+    if(!selected.length || selected[0].raw===0) return "I couldn't find a clearly relevant passage in this tiny sample knowledge base. A production RAG system should say it lacks sufficient evidence or try a different retrieval strategy, rather than inventing an answer.";
+    if(q.includes("where") || q.includes("located")) return "The Eiffel Tower is located in Paris, France. This answer is supported by the overview passage retrieved from the sample documents.";
+    if(q.includes("when") || q.includes("completed") || q.includes("year")) return "The Eiffel Tower was completed in 1889 for the 1889 World's Fair, according to the history passage in the sample knowledge base.";
+    if(q.includes("tall") || q.includes("height")) return "The Eiffel Tower is about 330 metres (1,083 feet) tall, including its antennas. Its height can vary slightly with temperature.";
+    if(q.includes("what is rag") || (q.includes("rag") && (q.includes("explain")||q.includes("mean")))) return "RAG stands for Retrieval-Augmented Generation. It retrieves relevant information from an external knowledge source and provides it to a language model as context before the model generates an answer.";
+    if(q.includes("embedding") || q.includes("vector")) return "An embedding is a numerical vector representing aspects of a text's meaning. A retrieval system can compare vectors to find passages that may be relevant to a user's query.";
+    if(q.includes("rerank") || q.includes("reranker")) return "Retrieval finds candidate passages; an optional reranker scores or reorders those passages for the specific query. The best-ranked passages can then be sent to the LLM as context.";
+    return "Based on the most relevant sample passage: " + selected[0].text + " The simulator ranks this passage as the best available match, but a real RAG system would use a model to assess relevance and generate a more tailored response.";
+  }
+  function resetState(){
+    document.querySelectorAll(".step-card").forEach(c=>c.classList.remove("completed"));
+    document.querySelectorAll(".result-step").forEach(c=>c.classList.remove("active","complete"));
+    $("progress-bar").style.width="0%"; $("progress-text").textContent="0 / 8 steps";
+  }
+  function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
+  async function simulate(){
+    if(running)return;
+    const query=input.value.trim();
+    if(!query){input.focus();$("status").textContent="Type a question first";return}
+    running=true; resetState();
+    $("answer-text").textContent="Following the pipeline…";
+    $("sources").innerHTML="";
+    $("query-demo").textContent="“"+query+"” → query embedding → search";
+    $("status").textContent="Preparing documents…";
+    const ranked=rankDocs(query), selected=ranked.slice(0,3);
+    const labels=[
+      "Loading source documents…","Splitting documents into chunks…","Creating chunk embeddings…",
+      "Indexing vectors and text…","Embedding the user's query…","Retrieving candidates and reranking…",
+      "Passing query + context to the LLM…","Returning the answer…"
+    ];
+    for(let i=1;i<=8;i++){
+      $("status").textContent=labels[i-1];
+      document.querySelectorAll(".result-step").forEach(el=>{
+        const n=Number(el.dataset.resultStep);
+        el.classList.toggle("complete",n<i);
+        el.classList.toggle("active",n===i);
+      });
+      await wait(260);
+      $("progress-bar").style.width=(i/8*100)+"%";
+      $("progress-text").textContent=i+" / 8 steps";
+      $("step"+i).classList.add("completed");
+    }
+    $("status").textContent="Simulation complete";
+    $("retrieval-demo").innerHTML=selected.map((d,i)=>`<div class="retrieval-row"><span>Rank ${i+1}: Chunk ${d.id} · ${escapeHtml(d.source)}</span><span class="score">${d.score.toFixed(2)}</span></div>`).join("");
+    $("answer-text").textContent=buildAnswer(query,selected);
+    $("sources").innerHTML=selected.map(d=>`<span class="source">${escapeHtml(d.source)}</span>`).join("");
+    $("explain").innerHTML="<strong>What happened:</strong> the simulator scored sample passages using simple keyword and topic rules, then showed the top three. These scores are illustrative—not real vector similarity or a real LLM response. In a production RAG system, an embedding model, retriever, optional reranker, and LLM would perform these jobs.";
+    running=false;
+  }
+  function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+  form.addEventListener("submit",e=>{e.preventDefault();simulate()});
+  document.querySelectorAll("[data-query]").forEach(btn=>btn.addEventListener("click",()=>{input.value=btn.dataset.query;simulate()}));
+  document.querySelectorAll(".nav button").forEach(btn=>btn.addEventListener("click",()=>{
+    document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));btn.classList.add("active");
+    const view=btn.dataset.view;
+    if(view==="query"){ $("query-panel").scrollIntoView({behavior:"smooth",block:"center"});input.focus(); }
+    else if(view==="documents"){ $("step1").scrollIntoView({behavior:"smooth",block:"center"}); }
+    else if(view==="knowledge"){ $("step4").scrollIntoView({behavior:"smooth",block:"center"}); }
+    else {window.scrollTo({top:0,behavior:"smooth"});}
+  }));
+})();
+</script>
+</body>
+</html>
